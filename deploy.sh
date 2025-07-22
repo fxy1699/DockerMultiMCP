@@ -91,8 +91,8 @@ check_dependencies() {
         missing_deps+=("docker")
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
-        missing_deps+=("docker-compose")
+    if ! docker compose version &> /dev/null; then
+        missing_deps+=("docker compose")
     fi
     
     if [ ${#missing_deps[@]} -ne 0 ]; then
@@ -278,19 +278,19 @@ deploy_services() {
     
     # 停止现有服务
     log_info "停止现有服务..."
-    docker-compose $profiles down --remove-orphans 2>/dev/null || true
+    docker compose $profiles down --remove-orphans 2>/dev/null || true
     
     # 构建镜像
     log_info "构建服务镜像..."
     if [ -n "$no_cache_flag" ]; then
-        docker-compose $profiles build --no-cache
+        docker compose $profiles build --no-cache
     else
-        docker-compose $profiles build
+        docker compose $profiles build
     fi
     
     # 启动服务
     log_info "启动服务..."
-    docker-compose $profiles up -d $services
+    docker compose $profiles up -d $services
     
     log_success "服务部署完成"
 }
@@ -453,7 +453,7 @@ list_services() {
             local status="❌ 未运行"
             
             # 检查服务是否运行
-            if docker-compose ps "$name-mcp" 2>/dev/null | grep -q "Up"; then
+            if docker compose ps "$name-mcp" 2>/dev/null | grep -q "Up"; then
                 status="✅ 运行中"
             fi
             
@@ -463,7 +463,7 @@ list_services() {
     
     echo ""
     echo "📊 Docker Compose状态:"
-    docker-compose ps
+    docker compose ps
 }
 
 # 主函数
@@ -497,45 +497,45 @@ case "${1:-}" in
         shift
         log_info "启动服务..."
         services=$(select_services "$@")
-        docker-compose up -d $services
+        docker compose up -d $services
         log_success "服务已启动"
         ;;
     "stop")
         log_info "停止所有服务..."
-        docker-compose --profile dev --profile cache --profile monitoring down
+        docker compose --profile dev --profile cache --profile monitoring down
         log_success "服务已停止"
         ;;
     "restart")
         shift
         log_info "重启服务..."
         services=$(select_services "$@")
-        docker-compose restart $services
+        docker compose restart $services
         log_success "服务已重启"
         ;;
     "logs")
         shift
         service_name="${1:-}"
         if [ -n "$service_name" ]; then
-            docker-compose logs -f "$service_name"
+            docker compose logs -f "$service_name"
         else
-            docker-compose logs -f
+            docker compose logs -f
         fi
         ;;
     "status")
         echo "📊 服务状态:"
-        docker-compose ps
+        docker compose ps
         echo ""
         echo "📈 系统资源:"
         docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
         ;;
     "ps")
-        docker-compose ps
+        docker compose ps
         ;;
     "clean")
         log_warning "清理所有数据 (不可恢复)..."
         read -p "确认继续? (y/N): " confirm
         if [[ $confirm =~ ^[Yy]$ ]]; then
-            docker-compose --profile dev --profile cache --profile monitoring down -v --remove-orphans
+            docker compose --profile dev --profile cache --profile monitoring down -v --remove-orphans
             docker system prune -f
             rm -rf data/* logs/* nginx/ssl/*
             log_success "清理完成"
