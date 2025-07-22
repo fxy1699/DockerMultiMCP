@@ -1,0 +1,26 @@
+# FastAPI 和 Web 服务器 (必需)
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 异步HTTP客户端 (可选)
+httpx==0.25.2
+aiohttp==3.9.1
+
+# JSON和配置 (推荐)
+pydantic==2.5.2
+python-dotenv==1.0.0
+
+# 日志 (推荐)
+structlog==23.2.0
+
+# 根据具体MCP服务添加其他依赖
+# 例如：
+# requests==2.31.0
+# pandas==2.1.4
+# numpy==1.25.2
+# beautifulsoup4==4.12.2
+# playwright==1.40.0
+# redis==5.0.1
+
+# 你的MCP包
+# your-mcp-package>=1.0.0 

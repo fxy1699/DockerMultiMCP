@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # 小红书MCP服务器
+  xiaohongshu-mcp:
+    build:
+      context: ./mcp-servers/xiaohongshu
+      dockerfile: Dockerfile
+    container_name: xiaohongshu-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - DEBUG=false
+      - XIAOHONGSHU_ENABLED=true
+      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN:-xiaohongshu-secret}
+    volumes:
+      - ./data/xiaohongshu:/app/data
+      - ./logs/xiaohongshu:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mcp-network
+
+  # 示例：模板MCP服务器 (可选启用)
+  template-mcp:
+    build:
+      context: ./mcp-servers/template
+      dockerfile: Dockerfile
+    container_name: template-mcp-server
+    ports:
+      - "8002:8002"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8002
+      - DEBUG=false
+      - TEMPLATE_ENABLED=true
+    volumes:
+      - ./data/template:/app/data
+      - ./logs/template:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mcp-network
+    profiles:
+      - dev  # 只在开发模式下启用
+
+  # API网关和反向代理
+  api-gateway:
+    image: nginx:alpine
+    container_name: mcp-api-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - xiaohongshu-mcp
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # Redis缓存 (可选)
+  redis-cache:
+    image: redis:alpine
+    container_name: mcp-redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    profiles:
+      - cache  # 可选启用缓存
+
+  # 监控服务 (可选)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mcp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    profiles:
+      - monitoring  # 可选启用监控
+
+volumes:
+  redis-data:
+  prometheus-data:
+
+networks:
+  mcp-network:
+    driver: bridge
+
+# 使用profiles来控制服务启动
+# 默认启动：docker-compose up
+# 开发模式：docker-compose --profile dev up
+# 完整功能：docker-compose --profile dev --profile cache --profile monitoring up 
